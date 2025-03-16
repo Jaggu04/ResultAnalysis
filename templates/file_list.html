@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Uploaded Files</title>
+</head>
+<style>
+    /* General Styling */
+body {
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    padding: 20px;
+    flex-direction: column;
+}
+
+/* Main Container */
+.container {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Heading */
+h2 {
+    color: #2c3e50;
+    font-size: 26px;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+/* Form Styling */
+form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+/* Input and Select Fields */
+input[type="number"],
+select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease-in-out;
+}
+
+input[type="number"]:focus,
+select:focus {
+    border-color: #3498db;
+    outline: none;
+}
+
+/* Filter Button */
+button {
+    background: #3498db;
+    color: white;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    transition: 0.3s ease-in-out;
+    font-weight: 500;
+}
+
+button:hover {
+    background: #2980b9;
+    transform: scale(1.05);
+}
+
+/* File List Styling */
+ul {
+    list-style: none;
+    padding: 0;
+}
+
+ul li {
+    background: #ecf0f1;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 8px;
+    transition: 0.3s ease-in-out;
+}
+
+ul li:hover {
+    background: #d5dbdb;
+}
+
+/* File Download Links */
+a {
+    text-decoration: none;
+    color: #27ae60;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+a:hover {
+    color: #2ecc71;
+    text-decoration: underline;
+}
+
+/* Upload Another File Link */
+.upload-link {
+    display: block;
+    margin-top: 20px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Fade-in Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .container {
+        width: 90%;
+    }
+}
+
+</style>
+<body>
+    <h2>Uploaded Excel Files</h2>
+
+    <form method="GET">
+        <label for="year_of_admission">Filter by Admission Year:</label>
+        <input type="number" name="year_of_admission" placeholder="e.g. 2022">
+
+        <label for="studying_year">Filter by Studying Year:</label>
+        <select name="studying_year">
+            <option value="">--Select Year--</option>
+            <option value="FY">First Year</option>
+            <option value="SY">Second Year</option>
+            <option value="TY">Third Year</option>
+            <option value="BE">Bachelor of Engineering</option>
+        </select>
+        
+        <button type="submit">Filter</button>
+    </form>
+
+    <ul>
+        {% for file in files %}
+            <li>
+                <a href="{% url 'download_file' file.id %}">{{ file.file_name }}</a>
+            </li>
+        {% empty %}
+            <li>No files uploaded yet.</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'upload_file' %}">Upload Another File</a>
+</body>
+</html>

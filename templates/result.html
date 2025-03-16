@@ -1,0 +1,31 @@
+<h1>Analysis Results</h1>
+
+<!-- Show Data -->
+<table border="1">
+    <tr>
+        <th>Student ID</th>
+        <th>Name</th>
+        <th>Total Marks</th>
+        <th>Percentage</th>
+        <th>Grade</th>
+    </tr>
+    {% for student in df %}
+    <tr>
+        <td>{{ student.Student_ID }}</td>
+        <td>{{ student.Name }}</td>
+        <td>{{ student.Total_Marks }}</td>
+        <td>{{ student.Percentage }}%</td>
+        <td>{{ student.Grade }}</td>
+    </tr>
+    {% endfor %}
+</table>
+
+<!-- Charts -->
+<img src="{{ charts.pass_fail }}" width="500">
+<img src="{{ charts.grade_pie }}" width="500">
+
+<!-- Download PDF -->
+<a href="{% url 'download_full_pdf' %}" download>Download Full Report (PDF)</a>
+{% for student in df %}
+    <a href="{% url 'download_student_pdf' student_name=student.Name %}">Download {{ student.Name }}'s PDF</a><br>
+{% endfor %}

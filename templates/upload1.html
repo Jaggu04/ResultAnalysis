@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Excel File</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert2 -->
+</head>
+<style>
+    /* General Styling */
+    body {
+        font-family: 'Poppins', sans-serif;
+        background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        padding: 20px;
+    }
+    
+    /* Centered Container */
+    .container {
+        background: #fff;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.2);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+        animation: fadeIn 0.5s ease-in-out;
+    }
+    
+    /* Heading */
+    h2 {
+        color: #2c3e50;
+        font-size: 26px;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    /* Form */
+    form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    /* Input Field */
+    input[type="file"] {
+        padding: 12px;
+        border: 2px solid #ccc;
+        border-radius: 8px;
+        width: 100%;
+        transition: border-color 0.3s ease-in-out;
+    }
+    
+    input[type="file"]:hover,
+    input[type="file"]:focus {
+        border-color: #3498db;
+        outline: none;
+    }
+    
+    /* Upload Button */
+    button {
+        background: #3498db;
+        color: white;
+        padding: 12px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        transition: 0.3s ease-in-out;
+        font-weight: 500;
+    }
+    
+    button:hover {
+        background: #2980b9;
+        transform: scale(1.05);
+    }
+    
+    /* Link to View Files */
+    a {
+        display: inline-block;
+        margin-top: 15px;
+        text-decoration: none;
+        color: #27ae60;
+        font-weight: bold;
+        transition: 0.3s;
+    }
+    
+    a:hover {
+        color: #2ecc71;
+        text-decoration: underline;
+    }
+    
+    /* SweetAlert Custom Styling */
+    .swal2-popup {
+        font-size: 16px !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Fade-in Animation */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 480px) {
+        .container {
+            width: 90%;
+        }
+    }
+    
+
+</style>
+<body>
+    <h2>Upload Excel File</h2>
+    
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Upload</button>
+    </form>
+
+    <a href="{% url 'file_list' %}">View Uploaded Files</a>
+
+    <!-- Show Success Popup -->
+    {% if messages %}
+        <script>
+            {% for message in messages %}
+                Swal.fire({
+                    title: "Success!",
+                    text: "{{ message }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                }).then(() => {
+                    window.location.href = "{% url 'file_list' %}";  // Redirect after confirmation
+                });
+            {% endfor %}
+        </script>
+    {% endif %}
+</body>
+</html>
+
