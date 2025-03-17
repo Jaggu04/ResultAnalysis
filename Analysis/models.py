@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class ExcelFile(models.Model):
     STUDYING_YEAR_CHOICES = [
@@ -13,7 +14,7 @@ class ExcelFile(models.Model):
         ('B', 'Division B'),
         ('C', 'Division C'),
     ]
-
+    
     year_of_admission = models.IntegerField()  # Admission Year (e.g., 2022)
     studying_year = models.CharField(max_length=2, choices=STUDYING_YEAR_CHOICES)  
     division = models.CharField(max_length=1, choices=DIVISION_CHOICES)

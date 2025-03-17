@@ -16,19 +16,28 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from Analysis.views import * #to import all the functions from the views
+from Analysis.views import (
+    home, stafflogout, stafflogin, upload_and_analyze, 
+    download_full_pdf, download_student_pdf, 
+    upload_file, file_list, download_file
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('home/',home,name='home'),#call to home function
+    path('home/', home, name='home'),
     path('logout/', stafflogout, name='stafflogout'),
-    path('stafflogin/',stafflogin,name='stafflogin'),
-    path('',upload_and_analyze, name='upload_and_analyze'),
-    path('download/full/',download_full_pdf, name='download_full_pdf'),
-    path('download/student/<str:student_name>/', download_student_pdf, name='download_student_pdf'),
-
-     path('upload/', upload_file, name='upload_file'),
+    path('stafflogin/', stafflogin, name='stafflogin'),
+    
+    # File Upload & Analysis
+    path('', upload_and_analyze, name='upload_and_analyze'),
+    path('upload/', upload_file, name='upload_file'),
     path('files/', file_list, name='file_list'),
-    path('download/<int:file_id>/', download_file, name='download_file')
 
+    # PDF Download
+    path('download/full/', download_full_pdf, name='download_full_pdf'),
+    path('download/student/', download_student_pdf, name='download_student_pdf'),  # ✅ FIXED HERE
+    
+    # File Management
+    path('download/<int:file_id>/', download_file, name='download_file'),
 ]
+

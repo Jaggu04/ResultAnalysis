@@ -3,8 +3,6 @@ from django.http import HttpResponse
 from django.shortcuts import render,redirect
 from django.contrib.auth.models import User
 from django.contrib.auth  import login,logout,authenticate
-
-
 import pandas as pd
 import matplotlib
 matplotlib.use("Agg")  # Prevents Tkinter error
@@ -18,18 +16,15 @@ import os
 from django.conf import settings
 from .forms import ExcelFileUploadForm
 from .models import ExcelFile
+from django.contrib import messages
+import datetime
+import json
+
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from django.http import FileResponse
+import io
 #####################################################storage and upload fetch code#####################################################
-
-
-from django.contrib import messages
-
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from .forms import ExcelFileUploadForm
-from .models import ExcelFile
-import os
-from django.conf import settings
-from django.http import HttpResponse
 
 def upload_file(request):
     if request.method == "POST":
@@ -54,20 +49,27 @@ def upload_file(request):
     return render(request, 'upload1.html', {'form': form})
 
 
-#File List View with Dropdown
+####################################33File List View with Dropdown
 def file_list(request):
-    year_admission_filter = request.GET.get('year_of_admission', None)
+    year_filter = request.GET.get('year_of_admission', None)
     studying_year_filter = request.GET.get('studying_year', None)
 
     files = ExcelFile.objects.all()
 
-    if year_admission_filter:
-        files = files.filter(year_of_admission=year_admission_filter)
+    if year_filter:
+        files = files.filter(year_of_admission=year_filter)
     
     if studying_year_filter:
         files = files.filter(studying_year=studying_year_filter)
 
-    return render(request, 'file_list.html', {'files': files})
+    # Generate year choices dynamically
+    current_year = datetime.datetime.now().year
+    year_choices = [(year, str(year)) for year in range(2000, current_year + 1)]
+
+    return render(request, 'file_list.html', {
+        'files': files,
+        'year_choices': year_choices
+    })
 
 #  File Download View
 def download_file(request, file_id):
@@ -84,147 +86,195 @@ def download_file(request, file_id):
 
 
 #####################################################upload and analysis code#####################################################
+
+
+
 def upload_and_analyze(request):
     if request.method == "POST" and request.FILES.get("file"):
         uploaded_file = request.FILES["file"]
 
-        # Load data
+        # Load Excel Data
         df = pd.read_excel(uploaded_file)
 
+        # Ensure Correct Column Names
+        df.columns = df.columns.str.strip()
+        df.rename(columns={"Student ID": "Student_ID"}, inplace=True)  # Adjust if needed
         # Process Data
-        subject_columns = df.columns[5:]
+        subject_columns = df.columns[5:]  # Adjust according to your Excel structure
         for col in subject_columns:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = pd.to_numeric(df[col], errors="coerce")
         df.fillna(0, inplace=True)
 
+        # Calculate Scores
         total_possible_marks = len(subject_columns) * 100
-        df['Total Marks'] = df[subject_columns].sum(axis=1)
-        df['Percentage'] = (df['Total Marks'] / total_possible_marks) * 100
-        df['Grade'] = df['Percentage'].apply(lambda x: 'A+' if x >= 90 else ('A' if x >= 80 else ('B' if x >= 70 else ('C' if x >= 50 else 'F'))))
+        df["Total_Marks"] = df[subject_columns].sum(axis=1)
+        df["Percentage"] = (df["Total_Marks"] / total_possible_marks) * 100
+        df["Grade"] = df["Percentage"].apply(lambda x: "A+" if x >= 90 else 
+                                             ("A" if x >= 80 else 
+                                             ("B" if x >= 70 else 
+                                             ("C" if x >= 50 else "F"))))
 
-        # Save session data
-        request.session["df"] = df.to_dict(orient="records")
+        # Store Data in Session
+        request.session["df"] = json.dumps(df.to_dict(orient="records"))
 
-        # Generate Charts
-        charts = generate_charts(df)
+        # Generate Analysis Charts
+        charts = generate_charts(df, subject_columns)
 
-        return render(request, "result.html", {"df": df.to_dict(orient="records"), "charts": charts})
+        return render(request, "result.html", {
+            "df": df.to_dict(orient="records"),
+            "charts": charts,
+            "students": df["Name"].tolist(),  # Pass student names for dropdown
+        })
 
     return render(request, "upload.html")
 
 
-def generate_charts(df):
-    """Generates and saves charts as images, returning their paths."""
+def generate_charts(df, subject_columns):
+    """Generates multiple charts for better analysis."""
     chart_paths = {}
+    os.makedirs("static", exist_ok=True)
 
-    # Pass/Fail Bar Chart
-    pass_fail_counts = df['Grade'].apply(lambda x: 'Pass' if x != 'F' else 'Fail').value_counts()
+    # 1️⃣ Pass/Fail Bar Chart
+    pass_fail_counts = df["Grade"].apply(lambda x: "Pass" if x != "F" else "Fail").value_counts()
     plt.figure(figsize=(5, 3))
-    plt.bar(pass_fail_counts.index, pass_fail_counts.values, color=['green', 'red'])
+    plt.bar(pass_fail_counts.index, pass_fail_counts.values, color=["green", "red"])
     plt.title("Pass/Fail Distribution")
-    pass_chart_path = "static/pass_fail_chart.png"
-    plt.savefig(pass_chart_path)
-    chart_paths["pass_fail"] = pass_chart_path
+    plt.ylabel("Number of Students")
+    chart_paths["pass_fail"] = "static/pass_fail_chart.png"
+    plt.savefig(chart_paths["pass_fail"], bbox_inches="tight")
     plt.close()
 
-    # Grade Distribution Pie Chart
-    grade_counts = df['Grade'].value_counts()
+    # 2️⃣ Grade Distribution Pie Chart
+    grade_counts = df["Grade"].value_counts()
     plt.figure(figsize=(5, 3))
-    plt.pie(grade_counts, labels=grade_counts.index, autopct='%1.1f%%', startangle=90)
+    plt.pie(grade_counts, labels=grade_counts.index, autopct="%1.1f%%", startangle=90)
     plt.title("Grade Distribution")
-    pie_chart_path = "static/grade_distribution.png"
-    plt.savefig(pie_chart_path)
-    chart_paths["grade_pie"] = pie_chart_path
+    chart_paths["grade_pie"] = "static/grade_distribution.png"
+    plt.savefig(chart_paths["grade_pie"], bbox_inches="tight")
+    plt.close()
+
+    # 3️⃣ Top Performers (Top 10%)
+    top_performers = df.nlargest(max(1, int(len(df) * 0.1)), "Percentage")
+    plt.figure(figsize=(6, 4))
+    plt.bar(top_performers["Name"], top_performers["Percentage"], color="blue")
+    plt.xticks(rotation=45, ha="right")
+    plt.title("Top 10% Performers")
+    chart_paths["top_performers"] = "static/top_performers.png"
+    plt.savefig(chart_paths["top_performers"], bbox_inches="tight")
+    plt.close()
+
+    # 4️⃣ Subject-wise Average Marks
+    subject_means = df[subject_columns].mean()
+    plt.figure(figsize=(6, 4))
+    plt.bar(subject_means.index, subject_means.values, color="purple")
+    plt.xticks(rotation=45, ha="right")
+    plt.title("Average Marks Per Subject")
+    chart_paths["subject_average"] = "static/subject_average.png"
+    plt.savefig(chart_paths["subject_average"], bbox_inches="tight")
+    plt.close()
+
+    # 5️⃣ Class Performance Distribution (Histogram)
+    plt.figure(figsize=(6, 4))
+    plt.hist(df["Percentage"], bins=10, color="cyan", edgecolor="black")
+    plt.title("Class Performance Distribution")
+    plt.xlabel("Percentage Range")
+    plt.ylabel("Number of Students")
+    chart_paths["performance_distribution"] = "static/performance_distribution.png"
+    plt.savefig(chart_paths["performance_distribution"], bbox_inches="tight")
     plt.close()
 
     return chart_paths
 
-###################################full analysis download###########################################
-def generate_pdf(df):
-    """Generates a PDF for full data analysis."""
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-
-    pdf.cell(200, 10, txt="Student Result Analysis", ln=True, align='C')
-    pdf.ln(10)
-    pdf.cell(200, 10, txt=f"Total Students: {len(df)}", ln=True)
-
-    # Grade Distribution
-    pdf.image("static/grade_distribution.png", w=150)
-    pdf.ln(10)
-
-    pdf_output = BytesIO()
-    pdf_content = pdf.output(dest='S').encode('latin1')
-    pdf_output.write(pdf_content)
-    pdf_output.seek(0)
-    return pdf_output
-
-
 def download_full_pdf(request):
-    """Returns a downloadable PDF file."""
-    df = pd.DataFrame(request.session.get("df", []))
-    pdf_file = generate_pdf(df)
-    response = HttpResponse(pdf_file, content_type="application/pdf")
-    response["Content-Disposition"] = "attachment; filename=full_analysis.pdf"
-    return response
+    df = json.loads(request.session.get("df", "[]"))
+    if not df:
+        return HttpResponse("No data available for analysis", status=400)
 
-###################################for individual student download###########################################
-
-def generate_student_pdf(student_name, df):
-    """Generates a PDF for individual student performance."""
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=12)
-
-    # Get student data
-    student = df[df["Name"] == student_name].iloc[0]
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.setFont("Helvetica", 12)
 
     # Title
-    pdf.cell(200, 10, txt=f"Student Performance Report: {student_name}", ln=True, align='C')
-    pdf.ln(10)
+    p.drawString(100, 750, "Class Performance Report")
 
-    # Basic Info
-    pdf.cell(200, 10, txt=f"Student ID: {student['Student ID']}", ln=True)
-    pdf.cell(200, 10, txt=f"Total Marks: {student['Total Marks']}", ln=True)
-    pdf.cell(200, 10, txt=f"Percentage: {student['Percentage']:.2f}%", ln=True)
-    pdf.cell(200, 10, txt=f"Grade: {student['Grade']}", ln=True)
+    # Pass/Fail Stats
+    pass_count = sum(1 for s in df if s["Grade"] != "F")
+    fail_count = sum(1 for s in df if s["Grade"] == "F")
+    total_students = len(df)
 
-    # Subject-wise marks
-    pdf.ln(10)
-    pdf.cell(200, 10, txt="Subject-wise Performance:", ln=True)
-    for subject in df.columns[5:-3]:  # Assuming subjects start from index 5
-        marks = student[subject]
-        grade = 'A+' if marks >= 90 else 'A' if marks >= 80 else 'B' if marks >= 70 else 'C' if marks >= 50 else 'F'
-        pdf.cell(200, 10, txt=f"{subject}: {marks} (Grade: {grade})", ln=True)
+    p.drawString(100, 720, f"Total Students: {total_students}")
+    p.drawString(100, 700, f"Pass Count: {pass_count}")
+    p.drawString(100, 680, f"Fail Count: {fail_count}")
 
-    # Performance comment
-    pdf.ln(10)
-    comment = "Excellent performance! Keep it up!" if student["Grade"] in ["A+", "A"] else \
-              "Good work, but room for improvement." if student["Grade"] == "B" else \
-              "Needs more effort." if student["Grade"] == "C" else "Failing. Needs serious attention."
-    pdf.cell(200, 10, txt=f"Performance Review: {comment}", ln=True)
+    # Grade Distribution
+    grade_counts = {g: sum(1 for s in df if s["Grade"] == g) for g in ["A+", "A", "B", "C", "F"]}
+    y_pos = 660
+    for grade, count in grade_counts.items():
+        p.drawString(100, y_pos, f"{grade}: {count} students")
+        y_pos -= 20
 
-    # Save PDF as bytes
-    pdf_output = BytesIO()
-    pdf_content = pdf.output(dest='S').encode('latin1')
-    pdf_output.write(pdf_content)
-    pdf_output.seek(0)
-    return pdf_output
+    # Add Analysis Charts
+    charts = ["pass_fail_chart.png", "grade_distribution.png", "top_performers.png", "subject_average.png", "performance_distribution.png"]
+    y_pos = 580
+    for chart in charts:
+        img_path = f"static/{chart}"
+        if os.path.exists(img_path):
+            p.drawImage(img_path, 100, y_pos, width=400, height=200)
+            y_pos -= 220  # Move down for next chart
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    return FileResponse(buffer, as_attachment=True, filename="Class_Analysis_Report.pdf")
 
 
-def download_student_pdf(request, student_name):
-    """Returns a downloadable PDF file for an individual student."""
-    df = pd.DataFrame(request.session.get("df", []))
+def download_student_pdf(request):
+    student_name = request.GET.get("student_name")  
+    if not student_name:
+        return HttpResponse("No student selected", status=400)
+    
+    df = json.loads(request.session.get("df", "[]"))
+    student = next((s for s in df if s["Name"] == student_name), None)
+    
+    if not student:
+        return HttpResponse("Student data not found", status=404)
 
-    # Validate student exists
-    if student_name not in df["Name"].values:
-        return HttpResponse("Student not found", status=404)
+    buffer = io.BytesIO()
+    p = canvas.Canvas(buffer, pagesize=letter)
+    p.setFont("Helvetica-Bold", 14)
 
-    pdf_file = generate_student_pdf(student_name, df)
-    response = HttpResponse(pdf_file, content_type="application/pdf")
-    response["Content-Disposition"] = f"attachment; filename={student_name}_report.pdf"
-    return response
+    # Title
+    p.drawString(100, 750, f"Performance Report for {student_name}")
+    p.setFont("Helvetica", 12)
+
+    # Table Header
+    y_pos = 700
+    p.drawString(100, y_pos, "Subject")
+    p.drawString(300, y_pos, "Marks")
+    p.line(100, y_pos - 5, 400, y_pos - 5)  # Underline header
+
+    # Subject-wise Marks
+    y_pos -= 30
+    for subject, marks in student.items():
+        if subject not in ["Name", "Total_Marks", "Percentage", "Grade"]:  # Include only subjects
+            p.drawString(100, y_pos, subject)
+            p.drawString(300, y_pos, str(marks))
+            y_pos -= 20
+
+    # Total Score, Percentage & Grade
+    y_pos -= 10
+    p.line(100, y_pos, 400, y_pos)  # Underline before summary
+    y_pos -= 20
+    p.drawString(100, y_pos, f"Total Marks: {student['Total_Marks']}")
+    p.drawString(100, y_pos - 20, f"Percentage: {student['Percentage']}%")
+    p.drawString(100, y_pos - 40, f"Grade: {student['Grade']}")
+
+    p.showPage()
+    p.save()
+
+    buffer.seek(0)
+    return FileResponse(buffer, as_attachment=True, filename=f"{student_name}_report.pdf")
 
 
 ################################################Authentication code########################################

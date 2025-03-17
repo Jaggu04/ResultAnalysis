@@ -13,7 +13,7 @@
     <tr>
         <td>{{ student.Student_ID }}</td>
         <td>{{ student.Name }}</td>
-        <td>{{ student.Total_Marks }}</td>
+        <td>{{ student.Total_Marks }}</td> <!-- Fixed column name -->
         <td>{{ student.Percentage }}%</td>
         <td>{{ student.Grade }}</td>
     </tr>
@@ -21,11 +21,124 @@
 </table>
 
 <!-- Charts -->
-<img src="{{ charts.pass_fail }}" width="500">
-<img src="{{ charts.grade_pie }}" width="500">
+<h2>Analysis Charts</h2>
+<img src="{{ charts.pass_fail }}" width="400">
+<img src="{{ charts.grade_pie }}" width="400">
+<img src="{{ charts.top_performers }}" width="400">
+<img src="{{ charts.subject_average }}" width="400">
+<img src="{{ charts.performance_distribution }}" width="400">
 
-<!-- Download PDF -->
+<!-- Dropdown for Student PDF -->
+<h2>Download Individual Reports</h2>
+<form action="{% url 'download_student_pdf' %}" method="GET">
+    <select name="student_name">
+        {% for student in students %}
+        <option value="{{ student }}">{{ student }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Download PDF</button>
+</form>
+
+<!-- Download Full Report -->
+<h2>Download Full Report</h2>
 <a href="{% url 'download_full_pdf' %}" download>Download Full Report (PDF)</a>
-{% for student in df %}
-    <a href="{% url 'download_student_pdf' student_name=student.Name %}">Download {{ student.Name }}'s PDF</a><br>
-{% endfor %}
+
+
+<style>
+    /* General Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f9;
+    margin: 20px;
+    padding: 20px;
+    text-align: center;
+}
+
+h1, h2 {
+    color: #333;
+}
+
+/* Table Styling */
+table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+th {
+    background-color: #4CAF50;
+    color: white;
+    font-weight: bold;
+}
+
+td {
+    color: #555;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+/* Charts Section */
+img {
+    margin: 10px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Styling */
+form {
+    margin: 20px auto;
+    width: 50%;
+    padding: 15px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+select, button {
+    padding: 10px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: 1px solid #ddd;
+    margin: 5px;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+/* Download Links */
+a {
+    display: inline-block;
+    padding: 10px 15px;
+    text-decoration: none;
+    background-color: #007BFF;
+    color: white;
+    border-radius: 5px;
+    margin: 10px;
+    transition: 0.3s;
+}
+
+a:hover {
+    background-color: #0056b3;
+}
+
+</style>
