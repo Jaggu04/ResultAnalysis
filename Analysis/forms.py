@@ -1,9 +1,13 @@
 from django import forms
 from .models import ExcelFile
+import datetime
+
+# Generate year choices dynamically from 2000 to the current year
+YEAR_CHOICES = [(year, str(year)) for year in range(2000, datetime.datetime.now().year + 1)]
 
 class ExcelFileUploadForm(forms.ModelForm):
-    year_of_admission = forms.IntegerField(label="Year of Admission")
-    
+    year_of_admission = forms.ChoiceField(choices=YEAR_CHOICES, label="Year of Admission")
+
     class Meta:
         model = ExcelFile
         fields = ['year_of_admission', 'studying_year', 'division', 'uploaded_file']
